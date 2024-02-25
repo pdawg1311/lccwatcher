@@ -102,10 +102,13 @@ class reader:
         
         return blockedWOwp01
     
-    def comReloc(self, mergedReloc):
+    def comReloc(self, mergedReloc,wp01):
         relocation = ['Reloc: (2hrs+)']
+        filterReloc = wp01[wp01['reloc age [min]'] > 60]
+        for j,k in filterReloc.iterrows():
+            relocation.append([f'Route: {k["rouRef"]}',f'Prio: {k["prio date actual"]}',f'Reloc Time: {k["reloc age [min]"]}'])
         for j,k in mergedReloc.iterrows():
-            relocation.append([f'Route: {j["rouRef"]}',f'Prio: {j["prio date actual"]}'])
+            relocation.append([f'Route: {k["rouRef"]}',f'Prio: {k["prio date actual"]}'])
         return relocation
     
 
@@ -191,24 +194,29 @@ class reader:
 
         summed_wp01 = columnedwp01.groupby('Customer Ident')['picks open'].sum().reset_index()
         
-        summed_om36 = columnedom36.groupby('Customer Ident')['# UM Open'].sum().reset_index()
+        summed_om36 = columnedom36.groupby('Customer Ident').agg({'# UM Open': 'sum', 'Route State': 'first'}).reset_index()
+
+        print(summed_om36)
 
 
-        merged_df = pd.merge(summed_wp01[['Customer Ident', 'picks open']], summed_om36[['Customer Ident', '# UM Open']], on='Customer Ident', how='outer')
+        merged_df = pd.merge(summed_wp01[['Customer Ident', 'picks open']], summed_om36[['Customer Ident', '# UM Open','Route State']], on='Customer Ident', how='outer')
         merged_df.fillna(0, inplace=True)
 
         merged_df['abs_difference'] = abs(merged_df['picks open'] - merged_df['# UM Open'])
+
+        print(merged_df)
 
 
         for i,j in merged_df.iterrows():
             if j['abs_difference'] > 200:
                 if j['picks open'] > j['# UM Open']:
                     filtered_df = columnedom36[columnedom36['Customer Ident'] == j['Customer Ident']]
-                    subsystemMatch.append([f'Customer: {j["Customer Ident"]}',f'COM:{filtered_df["COM # UM Open"]}',f'AIO: {filtered_df["AIO # UM Open"]}',f'AIO: {filtered_df["CPS # UM Open"]}'])
+                    subsystemMatch.append([f'Customer: {j["Customer Ident"]}',f'Route type: {j["Route State"]}',f'COM:{filtered_df["COM # UM Open"]}',f'AIO: {filtered_df["AIO # UM Open"]}',f'AIO: {filtered_df["CPS # UM Open"]}'])
                 else:
-                    subsystemMatch.append([f'Customer: {j["Customer Ident"]}',f'ABS Diff: {j["abs_difference"]}','LBS Higher'])
+                    subsystemMatch.append([f'Customer: {j["Customer Ident"]}',f'Route type: {j["Route State"]}',f'ABS Diff: {j["abs_difference"]}','LBS Higher'])
 
         return subsystemMatch
+    
     
 
     def om36Parse(self,om36):
@@ -306,7 +314,7 @@ class reader:
         #COM ARRAYS -----------------------------------------------------------
         priodatewp01 = self.latecomWo(filterwp01,timeHighestPick)
         blockedWOwp01 = self.blockedWp01(filteredblockedwp01)
-        relocation = self.comReloc(mergedReloc)
+        relocation = self.comReloc(mergedReloc,wp01[-1])
         comsDropped = self.latestComWo(wp01[-1])
 # need to make a no stock check -----------------------
 
@@ -350,7 +358,7 @@ class reader:
             
                                                 
 
-        self.warnings = [blockedWOwp01,relocation,priodatewp01,pickedom01,prepicks,planCheckom36,waitStartinfo, subsystemMatch , om01PalBlockReason,calcVolume,sixamCheck,comsDropped,palletWo,self.latestFiles]
+        self.warnings = [blockedWOwp01,relocation,priodatewp01,pickedom01,prepicks,planCheckom36,waitStartinfo, subsystemMatch , om01PalBlockReason,sixamCheck,comsDropped,palletWo,self.latestFiles]
 
 #-----------CHECKS END -----------------------------------------
 

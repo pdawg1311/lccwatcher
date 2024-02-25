@@ -53,6 +53,7 @@ class MyGUI:
             csv = [file for file in os.listdir(python_home) if file.endswith('.csv')]
          
             new_csv_files = [file for file in csv if file not in csv_files]
+            
 
             if new_csv_files:
                 print('updating Array')
@@ -168,7 +169,7 @@ class MyGUI:
         self.data=self.readerr.warnings
         self.clear_canvas()
         self.redraw()
-        self.addRect('hi',''"#00aa69") 
+       
         
             
     def send(self,array):
@@ -178,12 +179,16 @@ class MyGUI:
             formatted_string = f'---------------------------{str(array[-1][-1][-1]).split("_")[0]}-----------------------------'
             test1.teamSender(formatted_string)
             for i in array:
+               
                 print(i)
                 if i == array[-1]:
                     continue
 
                 if len(i)>1:
-                    test1.teamSender(str(i).replace("'",""))
+                    if 'Coms Dropped till' in i[0]:
+                        test1.teamSender(str(i))
+                    else:
+                        test1.teamSender(i)
 
         
         
